@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.alibaba.testable'
+version = '1.0.0-SNAPSHOT'
+sourceCompatibility = '8'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation('org.junit.jupiter:junit-jupiter:5.6.2')
+    testImplementation('com.alibaba.testable:testable-all:0.7.5')
+    testAnnotationProcessor('com.alibaba.testable:testable-processor:0.7.5')
+    implementation 'cn.hutool:hutool-all:5.6.1'
+
+    testImplementation 'org.jacoco:org.jacoco.cli:0.8.8:nodeps'
+    testImplementation 'org.jacoco:org.jacoco.agent:0.8.8:runtime'
+
+}
+
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
+test {
+    group "verification"
+    jvmArgs "-javaagent:${classpath.find { it.name.contains("jacoco.agent") }.absolutePath}=destfile=build/jacoco/test.exec,append=true," +
+            "excludes=com/luo/std/**," +
+            "inclnolocationclasses=false,dumponexit=true,output=file,jmx=false",
+            "-javaagent:${classpath.find { it.name.contains("testable-agent") }.absolutePath}"
+    useJUnitPlatform()
+}
+
+
+task jacocoTestReport(type: Exec) {
+    dependsOn test
+    workingDir "${buildDir}"
+    commandLine 'java', '-jar', "${configurations.testRuntimeClasspath.files.find { it.name.contains("jacoco.cli") }.absolutePath}",
+            'report', 'jacoco/test.exec', '--classfiles', 'classes/java/main','--sourcefiles','../src/main/java',
+            '--html','reports/jacoco/test/html'
+}
+
+test.finalizedBy jacocoTestReport
